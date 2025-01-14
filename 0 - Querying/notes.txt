@@ -1,0 +1,50 @@
+Reasons to use a database over a spreadsheet:
+    Scalability
+    Greater update speed
+
+There are four operations you can apply on data in a database:
+    Create, read, update, delete
+DBMS = Database Management System - interface or language to interact with databases
+    Ex: MySQL, Oracle, PostgreSQL, Access, MongoDB (and you know... Teradata)
+Ways you would choose a DBMS:
+    Cost (proprietary vs free)
+    Amount of support (free/open source vs proprietary ones like Teradata)
+    Computational Weight (more featured versions like MySQL or PostgreSQL are heavier)
+
+SQL - Structured Query language
+    There are ANSI and ISO standards for SQL syntax.
+    But all versions of SQL are a subset of SQL and have some differences
+
+This course will start with SQLite and move on to MySQL and PostgreSQL
+
+SQLite is common for use in applications in phones, desktop apps and websites
+Using SQLite in a terminal:
+
+To clear the terminal screen, hit Ctrl + L.
+To get the previously executed instruction(s) on the terminal, press the Up Arrow key.
+If your SQL query is too long and wrapping around the terminal, you can hit enter and continue writing the query on the next line.
+To exit a database or the SQLite environment, use .quit.
+
+Apparently they consider it good practice to use double quotes around table and column names (aka SQL identifiers)...
+    There are apparently some situations where it matters.. for example, "" add case sensitivity in some DBMS.
+    Also, quotes are needed if you were to have an identifier with a space or other special character.
+    For max portability (i.e. between syntaxes) it might be ideal to use them
+    SQL Server uses [] instead of "" for this purpose
+Also, use single quotes for dates. Double quotes can technically work in some systems but... why
+
+SELECT, WHERE... you know this stuff
+Operators:
+    <> and != both are not equal. Others are what you'd expect (=, >, <, >=, <=, etc.)
+    IS NULL, IS NOT NULL, LIKE...
+        note you can do LIKE 'SAMPLE%TEST%'
+        you can't do WHERE 5 <= X <= 10 but you can do X BETWEEN 5 and 10 (that's inclusive)
+            or you split the conditions (WHERE ___ AND ___)
+    Note that operators aren't making assumptions about data type or anything, that comes from the data columns
+AND, OR, EXISTS... tons of stuff
+ORDER BY (asc by default) - DESC or ASC, LIMIT
+
+Aggregate Functions: COUNT, AVG, MIN, MAX, SUM
+    Note count does not count nulls - count(*) to count everything - or set nulls to something if you have to for comp reasons
+    This course doesn't talk about this yet but of course you use groupings to do more complex calculations with this
+    It'll get to all that later...
+    Use ROUND(____, 2) to round to 2 digits

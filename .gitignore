@@ -1,0 +1,13 @@
+*DTH
+*.srt
+*en
+*en.txt
+*.mp3
+*.mp4
+*.pdf
+*.pyc
+*.zip
+exercises.png
+assessment*
+*/assessment/*
+self.txt
