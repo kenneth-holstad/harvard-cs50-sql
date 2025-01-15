@@ -23,7 +23,7 @@ Using SQLite in a terminal:
 To clear the terminal screen, hit Ctrl + L.
 To get the previously executed instruction(s) on the terminal, press the Up Arrow key.
 If your SQL query is too long and wrapping around the terminal, you can hit enter and continue writing the query on the next line.
-To exit a database or the SQLite environment, use .quit.
+To exit a database or the SQLite environment, use .quit. (ctrl + z also works)
 
 Apparently they consider it good practice to use double quotes around table and column names (aka SQL identifiers)...
     There are apparently some situations where it matters.. for example, "" add case sensitivity in some DBMS.

@@ -1,0 +1,74 @@
+SQLite to see tables in database use .tables command. Easy enough
+Database with multiple tables with relationships between each other are a relational database.
+Relationships can be one-to-one, one-to-many, or many-to-many.
+    Entity relationship (ER) diagrams show these kind of relationships
+    See .png files in this section for ERD's
+
+Relationships are defined by the database designer using keys.
+
+Primary keys are unique identifiers that specify a unique entity in the table.
+    These could be made from existing data, but often they are system-generated.
+    A composite key would be a key composed of multiple fields.
+
+A foreign key is just a primary key from a different table, used to link between tables.
+
+See table "authored" in join table relationship.jpg: This known as a junction or joint table
+    used in a normalized data structure.
+
+Subqueries aka Nested Queries:
+I know these, but in general a big use case is to make a subquery to filter using a foreign key.
+
+Ex: SELECT "title"
+FROM "books"
+WHERE "publisher_id" = (
+    SELECT "id"
+    FROM "publishers"
+    WHERE "publisher" = 'Fitzcarraldo Editions'
+);
+
+Use IN instead of = for a many-to-many to return multiple answers.
+
+General note: SQL isn't white space sensitive at all but you should care a bit about readability.
+Comment with -- or multi-line with /* */
+
+Joins: Way to combine tables
+    Join aka Inner Join vs Outer Joins (Left, Right, or full outer)
+    
+There are also "Sets" you can make from operators like INTERSECT, UNION, EXCEPT
+Note: to use any of these you need to match up the columns used (# of columns and respective data types)
+Examples:
+
+SELECT "name" FROM "translators"
+INTERSECT
+SELECT "name" FROM "authors";
+-- This is like an inner join
+
+SELECT 'author' AS "profession", "name" 
+FROM "authors"
+UNION
+SELECT 'translator' AS "profession", "name" 
+FROM "translators";
+-- this is like an outer join
+
+SELECT "name" FROM "authors"
+EXCEPT
+SELECT "name" FROM "translators";
+-- this would be like a SELECT NOT IN
+
+-- To do the brain tease example, where you took all authors and translators but REMOVE the intersect:
+SELECT "name" FROM "translators"
+UNION
+SELECT "name" FROM "authors"
+EXCEPT (
+    SELECT "name" FROM "translators"
+    INTERSECT
+    SELECT "name" FROM "authors";
+)
+
+For some reason I learned UNION before, and probably EXCEPT too, but never INTERSECT.
+This would be useful for certain things, spend some time thinking about this...
+    But I guess you could always use joins to do the same thing. Probably why we never learned it.
+    Not all SQL databases even support INTERSECT so that also may have had to do with it...
+    In any case INTERSECT is basically one specific and less flexible use case of a join.
+
+GROUP BY, HAVING (as you know HAVING is basically just a WHERE for a group)
