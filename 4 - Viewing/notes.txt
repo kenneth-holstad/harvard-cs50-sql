@@ -1,0 +1,86 @@
+I'm already very familiar with views - they are virtual tables defined by a query.
+Note that since views are virtual - they update whenever the underlying data does.
+
+Views are useful for:
+simplifying: putting together data from different tables to be queried more simply,
+aggregating: running aggregate functions, like finding the sum, and storing the results,
+partitioning: dividing data into logical pieces,
+securing: hiding columns that should be kept secure.
+    (or more broadly, to create views with adjusted viewing permissions)
+
+and other things. For example, how we used to do it: you may have heavily normalized table structures.
+But you can create denormalized views on top of these structures to be user-friendly.
+Advantage: less storage requirement and better database design.
+Downside: more computational requirement to view, especially if logic is complex (but typical normalization isn't)
+
+Simplifying (denormalizing) Example:
+CREATE VIEW "longlist" AS
+SELECT "name", "title" FROM "authors"
+JOIN "authored" ON "authors"."id" = "authored"."author_id"
+JOIN "books" ON "books"."id" = "authored"."book_id";
+
+Aggregating Example:
+CREATE VIEW "average_book_ratings" AS
+SELECT "book_id" AS "id", "title", "year", ROUND(AVG("rating"), 2) AS "rating" 
+FROM "ratings"
+JOIN "books" ON "ratings"."book_id" = "books"."id"
+GROUP BY "book_id";
+
+note: you can also CREATE TEMPORARY VIEW to create views just for your connection session
+or you can even create views for single query... example:
+WITH "average_book_ratings" AS (
+    SELECT "book_id", "title", "year", ROUND(AVG("rating"), 2) AS "rating" FROM "ratings"
+    JOIN "books" ON "ratings"."book_id" = "books"."id"
+    GROUP BY "book_id"
+)
+SELECT "year" ROUND(AVG("rating"), 2) AS "rating" FROM "average_book_ratings"
+GROUP BY "year";
+
+Partitioning example (just to make a subset of data):
+CREATE VIEW "2022" AS
+SELECT "id", "title" FROM "books"
+WHERE "year" = 2022;
+
+Securing examples:
+Obviously one way of doing this is to make permissions involved - but SQLite doesn't do access control.
+Another way would also just be to partition by obscuring specific fields.
+    Or the reverse by combining data with secure fields
+
+Soft deletions - common method to have a "deleted" flag instead of actually deleting data. Ex:
+ALTER TABLE "collections" 
+ADD COLUMN "deleted" INTEGER DEFAULT 0;
+
+You can set it up to do it automatically:
+CREATE TRIGGER "delete"
+INSTEAD OF DELETE ON "current_collections"
+FOR EACH ROW
+BEGIN
+    UPDATE "collections" SET "deleted" = 1 
+    WHERE "id" = OLD."id";
+END;
+
+This adds slight complexities if you're trying to add new data to tables which have these kind of deletes.
+If you are adding data to replace a soft deleted row:
+CREATE TRIGGER "insert_when_exists"
+INSTEAD OF INSERT ON "current_collections"
+FOR EACH ROW 
+WHEN NEW."accession_number" IN (
+    SELECT "accession_number" FROM "collections"
+)
+BEGIN
+    UPDATE "collections" 
+    SET "deleted" = 0 
+    WHERE "accession_number" = NEW."accession_number";
+END;
+
+For fresh data:
+CREATE TRIGGER "insert_when_new"
+INSTEAD OF INSERT ON "current_collections"
+FOR EACH ROW
+WHEN NEW."accession_number" NOT IN (
+    SELECT "accession_number" FROM "collections"
+)
+BEGIN
+    INSERT INTO "collections" ("title", "accession_number", "acquired")
+    VALUES (NEW."title", NEW."accession_number", NEW."acquired");
+END;
