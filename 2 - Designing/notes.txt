@@ -1,0 +1,83 @@
+.schema gives info on how database was created 
+    or use it with table name for create command for that table
+
+All data combined in one table is DENORMALIZED.
+Split up into multiple tables with keys is NORMALIZED.
+    Warehouses often create normalized structures to avoid excessive redundancy/duplication of data
+    But as a user it's often useful to denormalize
+
+You need to decide how entities are related - see ER diagram stuff from last section
+
+A basic create table command just defines columns:
+CREATE TABLE riders (
+    "id",
+    "name"
+);
+DROP TABLE is pretty simple.
+
+But you likely want to define storage classes / data types
+*** I think here's where you can get some pretty significant differences between SQL flavors
+
+For SQLite there's 5 storage classes: Null, Integer, Real, Text, Blob
+    There are several data types contained within each storage class
+    Also columns may contain multiple data types in SQLite...
+        It has "type affinities" to choose if you don't define data type
+        Text, Numeric, Integer, Real, Blob
+
+Table Constraints are useful to define keys:
+CREATE TABLE riders (
+    "id" INTEGER,
+    "name" TEXT,
+    PRIMARY KEY("id")
+);
+
+-- See you can also set column constraints like NOT NULL
+CREATE TABLE stations (
+    "id" INTEGER,
+    "name" TEXT NOT NULL UNIQUE,
+    "line" TEXT NOT NULL,
+    PRIMARY KEY("id")
+);
+
+CREATE TABLE visits (
+    "rider_id" INTEGER,
+    "station_id" INTEGER,
+    FOREIGN KEY("rider_id") REFERENCES "riders"("id"),
+    FOREIGN KEY("station_id") REFERENCES "stations"("id")
+);
+
+Note: if a column is being used as a foreign key by another table, it can't be dropped.
+    thus you couldn't drop table "riders" without dropping the foreign key column in "visits" first
+    Something to do with that might be what would cause the critical errors in Teradata...
+
+To rename table: 
+ALTER TABLE _____ RENAME TO _____;
+
+To add column: 
+ALTER TABLE "swipes"
+ADD COLUMN "swipetype" TEXT;
+
+Or rename column is how you'd think it is:
+ALTER TABLE "swipes"
+RENAME COLUMN "swipetype" TO "type";
+
+Or to delete a column (and get fired from Capital One):
+ALTER TABLE "swipes"
+DROP COLUMN "type";
+
+Other more advanced create table statement:
+CREATE TABLE "swipes" (
+    "id" INTEGER,
+    "card_id" INTEGER,
+    "station_id" INTEGER,
+    "type" TEXT NOT NULL CHECK("type" IN ('enter', 'exit', 'deposit')),
+    "datetime" NUMERIC NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "amount" NUMERIC NOT NULL CHECK("amount" != 0),
+    PRIMARY KEY("id"),
+    FOREIGN KEY("station_id") REFERENCES "stations"("id"),
+    FOREIGN KEY("card_id") REFERENCES "cards"("id")
+);
+
+As an aside the reason they probably recommend putting quotes around everything
+is because if you try to name things like "type" or "order" or "name" or whatever
+it causes issues. Typically in industry they would just tell us not to use these words for column names.
