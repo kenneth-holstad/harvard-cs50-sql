@@ -1,0 +1,72 @@
+Writing - how to add, update, and delete data in database
+
+Basic way to add data into table is an INSERT INTO statement:
+INSERT INTO "collections" ("title", "accession_number", "acquired") 
+VALUES 
+('Imaginative landscape', '56.496', NULL),
+('Peonies and butterfly', '06.1899', '1906-01-01');
+
+you could do one row per statement or multiple like the above
+
+You could also utilize a subquery:
+INSERT INTO "user_logs" ("type", "password")
+SELECT 'update', (
+    SELECT "password"
+    FROM "users"
+    WHERE "username" = 'carter'
+);
+
+More useful perhaps is the ability to import data directly into the database, such as from a csv file.
+Example in SQLite: 
+.import --csv --skip 1 mfa.csv collections
+The second argument indicates that the first row of the CSV file (the header row) needs to be skipped
+
+If you don't have an id column in the imported data, you would likely want to first import to a temp table.
+.import --csv mfa.csv temp
+Then if you insert from this temp table the id's will be auto-generated.
+INSERT INTO "collections" ("title", "accession_number", "acquired") 
+SELECT "title", "accession_number", "acquired" FROM "temp";
+DROP TABLE "temp";
+
+While we can change the ordering of values in the INSERT INTO command, 
+we usually can’t change the ordering of the column names themselves. 
+The order of column names follows the same order used while creating the table.
+
+While trying to insert multiple rows into a table, if even one of them violates a constraint, 
+the insertion command will result in an error and none of the rows will be inserted!
+
+Deleting data: you can delete all data in a table simply
+DELETE FROM "collections"; -- careful, this deletes everything
+
+or delete matching a specific condition:
+DELETE FROM "collections"
+WHERE "title" = 'Spring outing' OR "acquired" IS NULL;
+
+Note that any delete impacting a referenced foreign key will cause problems.
+By default you would need to delete the impacted rows from the table with foreign key constraint first.
+Or you have other options in assigning the constraint:
+ON DELETE RESTRICT: This restricts us from deleting IDs when the foreign key constraint is violated.
+ON DELETE NO ACTION: This allows the deletion of IDs that are referenced by a foreign key and nothing happens.
+ON DELETE SET NULL: This allows the deletion of IDs that are referenced by a foreign key and sets the foreign key references to NULL.
+ON DELETE SET DEFAULT: This does the same as the previous, but allows us to set a default value instead of NULL.
+ON DELETE CASCADE: This allows the deletion of IDs that are referenced by a foreign key and also proceeds to cascadingly delete the referencing foreign key rows. 
+    For example, if we used this to delete an artist ID, all the artist’s affiliations with the artwork would also be deleted from the created table.
+
+By default, as we discussed before, SQLite will select the largest ID present in the table and increment it to obtain the next ID. 
+But we can use the AUTOINCREMENT keyword while creating a column to indicate that any deleted ID should be repurposed for a new row being inserted into the table.
+
+The other option is to UPDATE existing data:
+-- Change the artist ID for a specific painting
+UPDATE "created"
+SET "artist_id" = (
+    SELECT "id"
+    FROM "artists"
+    WHERE "name" = 'Li Yin'
+)
+WHERE "collection_id" = (
+    SELECT "id"
+    FROM "collections"
+    WHERE "title" = 'Farmers working at dawn'
+);
+
+Assessment 2 specifically has useful practice on data cleaning with SQL.
