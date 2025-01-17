@@ -1,0 +1,89 @@
+With big datasets, of course, it becomes necessary to think about optimization
+    Both time (computational) and space (storage)
+
+One way to optimize queries run on a given table is to index keys and other important columns.
+CREATE INDEX "title_index" ON "movies" ("title");
+-- to remove: DROP INDEX "title_index";
+
+.schema will also show indexes
+
+EXPLAIN QUERY PLAN is the SQLite command to see computational requirements for a query - put it before the query
+The index will improve performance for relevant queries by preventing a full table scan.
+.timer on
+    is a command in SQLite to track speed
+
+SQLite and most other DBMS will automatically index primary keys.
+You don't index everything always because indexing has its own costs
+    You'd notice these costs especially when you're inserting to or updating the table
+    That reminds me of having to update indexes too...
+
+Optimization example:
+SELECT "title" FROM "movies"
+WHERE "id" IN (
+    SELECT "movie_id" FROM "stars"
+    WHERE "person_id" = (
+        SELECT "id" FROM "people"
+        WHERE "name" = 'Tom Hanks'
+    )
+);
+
+--relevant indexes
+CREATE INDEX "person_index" ON "stars" ("person_id");
+CREATE INDEX "name_index" ON "people" ("name");
+
+The index on people uses a COVERING INDEX which essentially puts the answer into the actual index.
+You can make a separate index to do the same thing for stars:
+DROP INDEX "person_index";
+CREATE INDEX "person_index" ON "stars" ("person_id", "movie_id");
+
+I'll skip the section on what an index actually is... I've worked with them I know.
+But the problem is the index is a physical thing you have to store 
+and you gotta traverse it anytime you add data to a table.
+
+You can also make partial indexes:
+CREATE INDEX "recents" ON "movies" ("titles")
+WHERE "year" = 2023;
+
+^ this could be one way to fix the updating problem if you have users that just need to look at old data
+
+Terminal (unix) command to see size of database:
+du -b movies.db
+
+Dropping data (including indexes) doesn't actually delete the data so DB space will remain the same.
+Until you run the VACUUM command.
+
+Concurrency is the concept of applying multiple queries/interactions simultaneously
+Ex: a financial transaction would subtract money from one person and add to another
+
+Transactions have some properties, which can be remembered using the acronym ACID:
+    atomicity: can’t be broken down into smaller pieces,
+    consistency: should not violate a database constraint,
+    isolation: if multiple users access a database, their transactions cannot interfere with each other,
+    durability: in case of any failure within the database, all data changed by transactions will remain.
+
+You can create actual transactions in DB to ensure things behave as you want
+Example 1:
+BEGIN TRANSACTION;
+UPDATE "accounts" SET "balance" = "balance" + 10 WHERE "id" = 2;
+UPDATE "accounts" SET "balance" = "balance" - 10 WHERE "id" = 1;
+COMMIT;
+
+With COMMIT, the updates occur simultaneously
+    but you could create inconsistency if one failed and the other didn't.
+
+Example 2:
+BEGIN TRANSACTION;
+UPDATE "accounts" SET "balance" = "balance" + 10 WHERE "id" = 2;
+UPDATE "accounts" SET "balance" = "balance" - 10 WHERE "id" = 1; -- Invokes constraint error
+ROLLBACK;
+
+With ROLLBACK the transactions go... but if anything fails it undoes them.
+
+Key Considerations from Grok:
+Atomicity: Both commands support the atomicity property. 
+    COMMIT ensures all or none of the transaction's effects are applied, 
+    while ROLLBACK ensures none are if there's an issue.
+Consistency: By using ROLLBACK, you maintain database consistency by undoing changes that would lead to an inconsistent state.
+Isolation: Until you commit or rollback, other transactions might be blocked or see different views of data 
+    depending on the isolation level set for the transaction.
+Durability: Once committed, changes are durable; if rolled back, they are not.
