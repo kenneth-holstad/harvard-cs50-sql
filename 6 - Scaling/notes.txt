@@ -1,0 +1,179 @@
+To make more scalable databases we'll use more featured DB's: MySQL and PostgreSQL
+
+Nuances of MySQL syntax:
+Connecting to database looks like 
+    mysql -u root -h 127.0.0.1 -P 3306 -p
+Uses ` for titles of tables, columns, etc. (ex: `table`)
+Many int types: tinyint, smallint, mediumint, int, bigint (1,2,3,4,8 bytes)
+CHAR for fixed length, VARCHAR for variable length up to a max
+ENUM for a set list of options, SET to be able to set multiple from a list of options
+
+Example tables:
+CREATE TABLE `stations` (
+    `id` INT AUTO_INCREMENT,
+    `name` VARCHAR(32) NOT NULL UNIQUE,
+    `line` ENUM('blue', 'green', 'orange', 'red') NOT NULL,
+    PRIMARY KEY(`id`)
+);
+
+CREATE TABLE `swipes` (
+    `id` INT AUTO_INCREMENT,
+    `card_id` INT,
+    `station_id` INT,
+    `type` ENUM('enter', 'exit', 'deposit') NOT NULL,
+    `datetime` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `amount` DECIMAL(5,2) NOT NULL CHECK(`amount` != 0),
+    PRIMARY KEY(`id`),
+    FOREIGN KEY(`station_id`) REFERENCES `stations`(`id`),
+    FOREIGN KEY(`card_id`) REFERENCES `cards`(`id`)
+);
+
+Altering a table:
+ALTER TABLE `stations` 
+MODIFY `line` ENUM('blue', 'green', 'orange', 'red', 'silver') NOT NULL;
+
+Stored Procedures:
+--note: In MySQL and some other DBMS, you must change delimiter to make stored procedures work properly
+delimiter //
+
+CREATE PROCEDURE `current_collection`()
+BEGIN
+    SELECT `title`, `accession_number`, `acquired` 
+    FROM `collections` 
+    WHERE `deleted` = 0;
+END//
+
+delimiter ;
+
+CALL current_collection();
+
+--example with parameters as inputs
+delimiter //
+CREATE PROCEDURE `sell`(IN `sold_id` INT)
+BEGIN
+    UPDATE `collections` SET `deleted` = 1 
+    WHERE `id` = `sold_id`;
+    INSERT INTO `transactions` (`title`, `action`)
+    VALUES ((SELECT `title` FROM `collections` WHERE `id` = `sold_id`), 'sold');
+END//
+delimiter ;
+
+CALL `sell`(2);
+
+Another note: you may use some general code functions to do things with stored procedures. Such as:
+IF, ELSEIF, ELSEIF
+LOOP
+REPEAT
+WHILE
+...
+
+So you may want to do that to do things like, in the above example, not selling something you already sold.
+
+Here's an example where it does nothing:
+DELIMITER //
+CREATE PROCEDURE `sell`(IN `sold_id` INT)
+BEGIN
+    -- Only proceed if the item is not already sold (deleted = 0)
+    IF EXISTS (SELECT 1 FROM `collections` WHERE `id` = `sold_id` AND `deleted` = 0) THEN
+        UPDATE `collections` 
+        SET `deleted` = 1 
+        WHERE `id` = `sold_id`;
+        
+        INSERT INTO `transactions` (`title`, `action`)
+        VALUES ((SELECT `title` FROM `collections` WHERE `id` = `sold_id`), 'sold');
+    END IF;
+END//
+DELIMITER ;
+
+You could also do this with more explicit error handling but that's a topic for another day/
+
+
+
+Nuances of PostgreSQL syntax:
+"" are used for names like tables, columns
+Only has SMALLINT, INT, BIGINT (2,4,8 bytes)
+Serial is type used which automatically handles autoincrementing keys
+To connect to server looks like:
+    psql postgresql://postgres@127.0.0.1:5432/postgres
+
+Example table creates:
+CREATE TABLE "stations" (
+    "id" SERIAL,
+    "name" VARCHAR(32) NOT NULL UNIQUE,
+    "line" VARCHAR(32) NOT NULL,
+    PRIMARY KEY("id")
+);
+
+--you can create types by themselves
+CREATE TYPE "swipe_type" AS ENUM('enter', 'exit', 'deposit');
+
+CREATE TABLE "swipes" (
+    "id" SERIAL,
+    "card_id" INT,
+    "station_id" INT,
+    "type" "swipe_type" NOT NULL,
+    "datetime" TIMESTAMP NOT NULL DEFAULT now(),
+    "amount" NUMERIC(5,2) NOT NULL CHECK("amount" != 0),
+    PRIMARY KEY("id"),
+    FOREIGN KEY("station_id") REFERENCES "stations"("id"),
+    FOREIGN KEY("card_id") REFERENCES "cards"("id")
+);
+
+Scaling:
+The two main ways to scale are vertically (better servers)
+or horizontally (more servers) via replication
+Three main replication models: single-leader, multi-leader, leaderless
+    You could replicate synchronously (slower but more in sync for higher-stakes areas) or asynchronously
+Or you can shard, which means splitting the database across multiple servers
+    Problem with too much sharding is it can create single/lower points of failure
+
+Access controls:
+Remember how to set this -
+GRANT SELECT ON `rideshare`.`analysis` TO 'carter';
+REVOKE SELECT ON ... FROM user;
+
+You can also grant to:
+ALL, CREATE, INSERT, SELECT, UPDATE, DELETE, ...
+
+of course you can grant access by roles as well
+and you can grant not just to tables but also to views, stored procedures, etc.
+
+
+
+A way a malicious user could try to hack into your database is a SQL Injection Attack:
+
+For example, a website that asks a user to log in with their username and password 
+may be running a query like this on the database.
+
+SELECT `id` FROM `users`
+WHERE `user` = 'Carter' AND `password` = 'password';
+In the above example, the user Carter entered their username and password as per usual. 
+However, a malicious user could enter something different, like the string “password’ OR ‘1’ = 1” as their password. 
+In this case, they are trying to gain access to the entire database of users and passwords.
+
+SELECT `id` FROM `users`
+WHERE `user` = 'Carter' AND `password` = 'password' OR '1' = '1';
+
+
+Another way to steal balances from an accounts table:
+SELECT * FROM `accounts`
+WHERE `id` = 1 UNION SELECT * FROM `accounts`;
+
+
+To prevent this you can use a "prepared statement":
+PREPARE `balance_check`
+FROM 'SELECT * FROM `accounts`
+WHERE `id` = ?';
+
+SET @id = 1;
+EXECUTE `balance_check` USING @id;
+
+So if they tried running this:
+SET @id = '1 UNION SELECT * FROM `accounts`';
+EXECUTE `balance_check` USING @id;
+
+It would only show the balance for id 1 and not the rest.
+
+
+Other note: Format strings in Python have the same pitfall where they are susceptible to SQL injection attacks.
+So you wouldn't want to use them in executing a SQL query.

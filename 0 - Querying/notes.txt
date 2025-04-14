@@ -48,3 +48,8 @@ Aggregate Functions: COUNT, AVG, MIN, MAX, SUM
     This course doesn't talk about this yet but of course you use groupings to do more complex calculations with this
     It'll get to all that later...
     Use ROUND(____, 2) to round to 2 digits
+
+Random query I found online which could be an interview question: show random result out of table
+SELECT DISTINCT make FROM cars
+ORDER BY RAND()
+LIMIT 1;
